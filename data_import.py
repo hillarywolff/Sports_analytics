@@ -27,7 +27,7 @@ for f in all_files:
 
 big_ass_df = pd.concat(df)
 
-
+big_ass_df.to_csv(r'/Users/hillarywolff/Desktop/2019-2020_data.csv')
 
 
 
