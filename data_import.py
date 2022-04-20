@@ -28,13 +28,10 @@ for f in all_files:
 
 big_ass_df = pd.concat(df)
 
-big_ass_df.columns
 
 df = big_ass_df
 ####################################################################
 
-
-df['event_type'].unique()
 event_types = ['start of period', 'end of period', 'sub', 'timeout', 'unknown']
 
 df = df[df['event_type'].str.contains('|'.join(event_types))==False]
@@ -43,14 +40,10 @@ df = df.fillna(0)
 df_blank = df[df['event_type'].str.contains('rebound')]
 
 df_blank = df_blank[df_blank['team']==0]
-df_blank.head()
+i = df[df['team']==0].index
+df = df.drop(i, axis=0)
+
 # create crosswalk for team name and abbreviations to map over the team col
-
-
-crosswalk = pd.read_csv("/Users/hillarywolff/Desktop/nba_crosswalk.csv")
-
-# if df_blank[description]str.contains(crosswalk['team_name'], df[team]replace(crosswalk[team])
-
 def separate_team(x):
     if search(r'rebound', x):
         return x.split(' ')[0]
@@ -63,6 +56,7 @@ df_blank['team_test'] = df_blank['team_test'].apply(separate_team)
 # successfully separated team name from 'rebound'
 
 
+crosswalk = pd.read_csv("/Users/hillarywolff/Desktop/nba_crosswalk.csv")
 
 team_crosswalk = crosswalk
 team_crosswalk['team'] = team_crosswalk['team'].str.strip()
@@ -71,12 +65,117 @@ team_crosswalk = team_crosswalk.set_index('team_name').T
 team_crosswalk = team_crosswalk.to_dict('list')
 
 df_blank['team'] = df_blank['team_test'].map(team_crosswalk)
-df_blank['team']
 
 df_blank = df_blank.drop('team_test', axis=1)
 
 
 df = pd.concat([df, df_blank])
+df['team'].unique
+################################################################
+
+df.columns
+
+
+df_FT = df[df['event_type'].str.contains('free throw')]
+
+df_FT['FIX'] = np.where((df_FT['points'] > 1), 1, 0) 
+df_FT['FIX_2'] = np.where((df_FT['points'] ==0) & (df_FT['result'].str.contains('made')), 1, 0)
+
+
+def blah(x):
+    if x > 0:
+        return '1'
+    else:
+        return x
+    
+df_FT['point_fix'] = df_FT['FIX'] + df_FT['FIX_2']
+df_FT['points'] = df_FT['point_fix'].apply(blah)    
+
+test_subset = df_FT[df_FT['point_fix'] > 0]
+
+
+    
+# for 
+
+# def filter_race(x):
+#     if x in black_list:
+#         return 'Black'
+#     elif x in (native_american_PI):
+#         return 'Native American or Pacific Islander'
+#     elif x in (asian_list):
+#         return 'Asian'
+#     elif x in (white_list):
+#         return 'White'
+#     elif x in (mid_east):
+#         return 'Middle Eastern/Arab'
+#     else:
+#         return 'Other/Unknown'
+
+# df['filter_patient_race'] = df['patient_race'].apply(filter_race)
+
+
+#df_FT['FIX_2'] = np.where((df_FT['points'] ==0) & (df_FT['result'].str.contains('made')), 1, 0)
+
+def fix_points(x):
+    if x == 1: 
+        return x == 1
+    elif x ==1:
+        return x ==1
+
+df_FT['points'] = df_FT['points'].apply(fix_points)
+
+#############################################################
+
+# create a column with dummies for made basket but no s.foul (and one)
+# -points = 2 & no s.foul, points =3 & no s.foul, 
+
+# points = 2 & s.foul & team1=team2 (did not change posssion)
+# points = 3 & s.foul & team1=team2
+# df['points'], df['reason'], df['team']
+
+def idk(points, reason, team):
+    if points == (2|3) and ((reason.str.contains('s.foul')) == False):
+        return 1
+    elif points == (2|3) and reason.str.contains('s.foul') and team.str.contains(f'{team}'): 
+        return 1
+    else:
+        return 0
+    
+        
+# 
+# column with dummies for TO
+# column with dummies for missed shot rebounded by opposing team
+# column with dummies if final free throw made (1 of 1, 2 of 2, 3 of 3)
+# 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
