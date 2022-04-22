@@ -23,6 +23,7 @@ big_ass_df = pd.DataFrame()
 df = []
 for f in all_files:
     csv = pd.read_csv(f, usecols=fields)
+    # do all data processing here
     df.append(csv)
 
 
@@ -111,26 +112,46 @@ df['final ft made'] = np.select(conditions, choices, default=0)
 
 # sum possession changes across types: made basket with no and one + final free throw made
 
+df['points'].unique()
+
+conditions = [
+    df['points'].eq(2) & df['reason'].ne('s.foul'), 
+    df['points'].eq(3) & df['reason'].ne('s.foul')
+    ]
+
+choices = [1, 1]
+df['basket, no foul'] = np.select(conditions, choices, default=0)
 
 
 
 
+conditions = [
+    df['points'].eq(2) & df['reason'].eq('s.foul'), 
+    df['points'].eq(3) & df['reason'].eq('s.foul')
+    ]
+
+choices = [1, 1]
+df['basket, foul'] = np.select(conditions, choices, default=0)
+
+df['sum possession changes'] = df['basket, no foul'] + df['final ft made']
 
 
 
-
-
-
-
+df = df.sort_values(by=['game_id'])
 ###############################################################
+df['game_id'] = df['game_id'].str.replace('(\D+)', '')
+
+df['game_id'].unique()
+
+# df1['end'] = df1.drop_duplicates(subset = ['record', 'start'])['start']\
+#    .shift(-1).reindex(index = df1.index, method = 'ffill')
 
 
+# MISSING: missed shot rebounded by opposing team
+# if event type is rebound and team in row one != team in row two
 
-
-
-
-
-
+# MISSING: potential possession number within game
+# first row of game = 1, second is row 1 + row 2 sum possession
 
 
 
