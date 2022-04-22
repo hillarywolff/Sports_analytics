@@ -153,60 +153,83 @@ choices = [1]
 df['first poss of qt'] = np.select(conditions, choices, default=0)
 
 # f. 
-# sum possession changes
-df['sum possession changes'] = df['basket, no foul'] + df['final ft made']
+df['possession change'] = np.where((df['basket, no foul']==1) |
+                                   (df['turnover']==1) |
+                                   (df['missed_shot_rebound'] ==1)|
+                                   (df['final ft made']==1), 1, 0)
+
+# creates dummy to indicate there is a change in possession
+# use this to determine play number 
 
 
 # g. 
 # MISSING: potential possession number within game
 # first row of game = 1, second is row 1 + row 2 sum possession
 
-df['potential possession number'] = df.shift(1, fill_value=1)['sum possession changes'] + df['sum possession changes']
+# df['potential possession number'] = df.shift(1, fill_value=1)['sum possession changes'] + df['sum possession changes']
 
     
 # if df.shift(2)['game_id'].eq(df.shift(1)['game_id']):
-#     df['new_col'] = df.shift(1)['AY'] + df.shift(2)['AX']
+#     df['potential possession num'] = df.shift(1)['potential possession number'] + df.shift(2)['sum possession changes']
     
 
 # h. unique possession identifier
-# concat game id, AY
+# string concat game id, potential possession number
 
 
 # i. indication of start of new possession
 
 # if df.shift(1)['period'].ne(df['period']) return 'new quarter'
-# if df.shift(1)['AZ'].ne(df['AZ']), df['event_type'], df['BA']
+# if df.shift(1)['unique possession id'].ne(df['unique possession id']), df['event_type'], df['indication of start of possession']
 
 # j. extended description
 
 # if df.shift(1)['period'].ne(df['period']) return 'new quarter'
-# if df.shift(1)['AZ'].ne(df['AZ']), concat df['event_type'], df['type']
-# else, df['BB']
+# if df.shift(1)['unique possession id'].ne(df['unique possession id']), concat df['event_type'], df['type']
+# else, df['extended description of start of possession']
 
 
 
 # ** not seeing any mention of 'hanging.tech.foul'**
 
+# new possession level df
+poss_df = df[df['possession change']==1]
+poss_df['poss number'] = range(len(poss_df))
+
+# if df.shift(1)['game_id'].eq(df['game_id']):
+#     poss_df['poss number'] = range(len(poss_df))
+# elif df.shift(1)['game_id'].ne(df['game_id']):
+#     poss_df['poss number'] # restart numbering
+
+
+#m=df['game_id'].ne(df.shift(1)['game_id'])
+#df['poss number'] = np.where(m, df.groupby(m.ne(m.shift()).cumsum()).cumcount()+1, 0)
+
+poss_df['poss number'].max()
+# 257,775 possessions 
+
+# if sum possession change != 1 , return nan
+# elif sum possession change.eq(1) & game_id.eq(shift(1)game_id), return n+1 (where n = np.where(closest value >0))
+# elif sum possession change.eq(1) & game_id.ne(shift(1)game_id), return 0
+
+
+# anchor = 5
+# dists = anchor - nonzeros
+# anchor = 5
+# dists = anchor - nonzeros
+# nhops = min(dists, key=abs)
+# hnops = min((anchor - df[df.A != 0].index), key=abs)
+
+# what does the turnouver do in the posession that it occurs
+# what does the turnover do to the next possession
+# what does the utrnover do two possessions down the road
+
+test = df[['team', 'possession change']]
+# need to check if shift is doing what i want
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# chance level data: dummy for offensive rebound within possession
 
 
 
