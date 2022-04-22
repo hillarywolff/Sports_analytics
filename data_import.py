@@ -188,7 +188,8 @@ df['possession change'] = np.where((df['basket, no foul']==1) |
 # if df.shift(1)['unique possession id'].ne(df['unique possession id']), concat df['event_type'], df['type']
 # else, df['extended description of start of possession']
 
-
+df = df.loc[df.astype(str).drop_duplicates().index]
+# this wont run
 
 # ** not seeing any mention of 'hanging.tech.foul'**
 
@@ -226,7 +227,7 @@ poss_df['poss number'].max()
 
 test = df[['team', 'possession change']]
 # need to check if shift is doing what i want
-
+# i dont think it is. 
 
 
 # chance level data: dummy for offensive rebound within possession
