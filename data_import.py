@@ -33,9 +33,26 @@ big_ass_df = pd.concat(df)
 df = big_ass_df
 ####################################################################
 
-event_types = ['start of period', 'end of period', 'sub', 'timeout', 'unknown']
-
+event_types = ['start of period', 'end of period', 'sub', 'timeout', 'unknown', 'ejection', 'nan']
 df = df[df['event_type'].str.contains('|'.join(event_types))==False]
+
+# remove rows: 
+# where type = t.foul, c.p.foul, free throw technical, free throw clear path 1 of 2, 
+# free throw clear path 2 of 2, free throw flagrant 1 of 1, free throw flagrant 1 of 2, 
+# free throw flagrant 1 of 3, free throw flagrant 2 of 2, free throw flagrant 2 of 3, 
+# free throw flagrant 3 of 3, **and 1 baskets**?
+# 
+# where type = team rebound and above dummy = 1
+
+type_remove = ['t.foul', 'c.p.foul', 'Free Throw Technical', 'Free Throw Clear Path 1 of 2',
+               'Free Throw Clear Path 2 of 2', 'Free Throw Flagrant 1 of 1', 
+               'Free Throw Flagrant 1 of 1', 'Free Throw Flagrant 1 of 2',
+               'Free Throw Flagrant 1 of 3', 'Free Throw Flagrant 2 of 2',
+               'Free Throw Flagrant 2 of 3', 'Free Throw Flagrant 3 of 3']
+
+df = df[df['type'].str.contains('/'.join(type_remove))==False]
+
+
 df = df.fillna(0)
 
 
@@ -68,8 +85,6 @@ ft_df = df[df['event_type'].str.contains('free throw')]
 ft_df['points'] = np.where((ft_df['result'] == 'made'), 1, 0)
 
 
-
-
 # need to delete places from main df that were fixed in two side dfs
 # create a dummy to indicate which rows were fixed? 
 # dummy = 1 where team name = 0 or where event type = ft and result = made and points != 1
@@ -88,76 +103,89 @@ df = df[df.remove == 0]
 
 df = pd.concat([df, blank_df, ft_df])
 df = df.drop('remove', axis=1)
-
-
+# remove unnecessary col
 
 ################################################################
-# create dummies for turnover and final free throw made
+###############################################################
+df['game_id'] = df['game_id'].str.replace('(\D+)', '')
+df = df.sort_values(by=['game_id', 'period', 'elapsed'])
 
+
+# a. made basket, no and 1
+conditions = [
+    df['points'].eq(2) & # shift next row
+    df.shift(1)['reason'].ne('s.foul'), 
+    df['points'].eq(3) & # shift next row
+    df.shift(1)['reason'].ne('s.foul'),
+    df['type'].eq('violation:defensive goaltending')
+    ]
+
+choices = [1, 1, 1]
+df['basket, no foul'] = np.select(conditions, choices, default=0)
+
+# b. turnover
 df['turnover'] = np.where(df['event_type'].str.contains('turnover'), 1, 0)
 
+# c. missed shot rebounded by opposing team
+conditions = [
+    df['type'].eq('rebound') & df['team'].ne(df.shift(1)['team'])
+    ]
+
+choices = [1]
+df['missed_shot_rebound'] = np.select(conditions, choices, default=0)
+
+# d. 
+# final free throw made
 conditions = [
     df['event_type'].eq('free throw') & df['result'].eq('made') & df['description'].eq('Free Throw 1 of 1'),
     df['event_type'].eq('free throw') & df['result'].eq('made') & df['description'].eq('Free Throw 2 of 2'),
     df['event_type'].eq('free throw') & df['result'].eq('made') & df['description'].eq('Free Throw 3 of 3')
     ]
-
 choices = [1, 1, 1]
-
 df['final ft made'] = np.select(conditions, choices, default=0)
 
-#############################################################
-# dummies for made basket without extra point
-# dummies for made basket with extra point? 
-
-# sum possession changes across types: made basket with no and one + final free throw made
-
-df['points'].unique()
-
+# e. 
+# first posession of new quarter
 conditions = [
-    df['points'].eq(2) & df['reason'].ne('s.foul'), 
-    df['points'].eq(3) & df['reason'].ne('s.foul')
+    df.shift(1)['period'].ne(df['period'])
     ]
+choices = [1]
+df['first poss of qt'] = np.select(conditions, choices, default=0)
 
-choices = [1, 1]
-df['basket, no foul'] = np.select(conditions, choices, default=0)
-
-
-
-
-conditions = [
-    df['points'].eq(2) & df['reason'].eq('s.foul'), 
-    df['points'].eq(3) & df['reason'].eq('s.foul')
-    ]
-
-choices = [1, 1]
-df['basket, foul'] = np.select(conditions, choices, default=0)
-
+# f. 
+# sum possession changes
 df['sum possession changes'] = df['basket, no foul'] + df['final ft made']
 
 
-
-df = df.sort_values(by=['game_id'])
-###############################################################
-df['game_id'] = df['game_id'].str.replace('(\D+)', '')
-
-df['game_id'].unique()
-
-# df1['end'] = df1.drop_duplicates(subset = ['record', 'start'])['start']\
-#    .shift(-1).reindex(index = df1.index, method = 'ffill')
-
-
-# MISSING: missed shot rebounded by opposing team
-# if event type is rebound and team in row one != team in row two
-
+# g. 
 # MISSING: potential possession number within game
 # first row of game = 1, second is row 1 + row 2 sum possession
 
+df['potential possession number'] = df.shift(1, fill_value=1)['sum possession changes'] + df['sum possession changes']
+
+    
+# if df.shift(2)['game_id'].eq(df.shift(1)['game_id']):
+#     df['new_col'] = df.shift(1)['AY'] + df.shift(2)['AX']
+    
+
+# h. unique possession identifier
+# concat game id, AY
+
+
+# i. indication of start of new possession
+
+# if df.shift(1)['period'].ne(df['period']) return 'new quarter'
+# if df.shift(1)['AZ'].ne(df['AZ']), df['event_type'], df['BA']
+
+# j. extended description
+
+# if df.shift(1)['period'].ne(df['period']) return 'new quarter'
+# if df.shift(1)['AZ'].ne(df['AZ']), concat df['event_type'], df['type']
+# else, df['BB']
 
 
 
-
-
+# ** not seeing any mention of 'hanging.tech.foul'**
 
 
 
