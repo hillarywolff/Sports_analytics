@@ -179,6 +179,11 @@ big_ass_df = pd.concat(df)
 clean_df = clean_df(big_ass_df)
 dummy_df = create_dummies(clean_df)
 
+
+
+dummy_df['season_possession_number'].max()
+
+
 # h. unique possession identifier
 
 # string concat game id,  possession number
