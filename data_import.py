@@ -176,12 +176,19 @@ for f in all_files:
 big_ass_df = pd.concat(df)
 
 
+
 clean_df = clean_df(big_ass_df)
 dummy_df = create_dummies(clean_df)
 
-
+dummy_df = dummy_df[dummy_df['event_type'].notna()]
 
 dummy_df['season_possession_number'].max()
+
+
+
+df = dummy_df[dummy_df['type'].str.contains('flagrant')]
+df_2 = dummy_df[dummy_df['description'].eq('t.foul')]
+
 
 
 # h. unique possession identifier
@@ -193,7 +200,10 @@ dummy_df['season_possession_number'].max()
 # how many total possessions per turnover type
 
 turnover_cols = ['made basket, no foul', 'turnover', 'def_rebound', 'final ft made', 'off_foul', 'off_violation']
-
+v_count = pd.DataFrame()
+for col in turnover_cols:
+    count = dummy_df[col].value_counts()
+    v_count = v_count.append(count)
 
 # 2019-20 team # of plays that start in each turnover
 
@@ -227,6 +237,33 @@ pp_p = total_points/total_poss
 pp_FTO = total_points/total_turnover
 pp_dfrb = total_points/def_reb
 pp_offviol = total_points/off_viol
+
+game_1 = dummy_df[dummy_df['game_id'].eq('0021900001')]
+
+steve_df = pd.read_excel('/Users/hillarywolff/Desktop/game1.xlsx')
+
+game_1.compare(steve_df, keep_equal=True, keep_shape=True)
+
+game_1['game_id'] = int(game_1['game_id'])
+
+merged = game_1.merge(steve_df, how='outer', left_on='game_id', right_on='game_id')
+
+
+steve_df.dtypes
+game_1.dtypes
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
