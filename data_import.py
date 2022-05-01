@@ -87,70 +87,43 @@ def clean_df(df):
     
 def create_dummies(df):
     
-    df['second_chance'] = np.where((df['type'].eq('rebound offensive')) |
-                                   (df['type'].eq('team rebound')), 1, 0)
+    df['second_chance'] = np.where((df['type'].str.contains('rebound offensive')) |
+                                   (df['type'].str.contains('team rebound')), 1, 0)
     # a. made basket, no foul
-    conditions = [
-        df['points'].eq(2) & # shift next row
-        df.shift(1)['reason'].ne('s.foul'), 
-        df['points'].eq(3) & # shift next row
-        df.shift(1)['reason'].ne('s.foul'),
-        df['type'].eq('violation:defensive goaltending')
-        ]
-    
-    choices = [1, 1, 1]
-    df['made basket, no foul'] = np.select(conditions, choices, default=0)
+    df['made basket, no foul'] = np.where((df['points'].eq(2)) & 
+                                      (df.shift(-1)['reason']!=('s.foul')) |
+                                      (df['points'].eq(3)) & 
+                                      (df['reason'].str.contains('s.foul') == False) |
+                                      df['type'].str.contains('violation:defensive goaltending'), 1, 0)
     
     # b. turnover
     df['turnover'] = np.where(df['event_type'].str.contains('turnover'), 1, 0)
     
     # c. missed shot rebounded by opposing team
-    conditions = [
-        df['event_type'].eq('rebound') & df['team'].ne(df.shift(1)['team'])
-        ]
-    
-    choices = [1]
-    df['def_rebound'] = np.select(conditions, choices, default=0)
+   
+    df['def_rebound'] = np.where(df['event_type'].str.contains('rebound') & 
+                                 (df['team']!=(df.shift(-1)['team'])), 1, 0)
     
     # d. 
     # final free throw made
-    conditions = [
-        df['event_type'].eq('free throw') & df['result'].eq('made') & df['type'].eq('Free Throw 1 of 1'),
-        df['event_type'].eq('free throw') & df['result'].eq('made') & df['type'].eq('Free Throw 2 of 2'),
-        df['event_type'].eq('free throw') & df['result'].eq('made') & df['type'].eq('Free Throw 3 of 3')
-        ]
-    choices = [1, 1, 1]
-    df['final ft made'] = np.select(conditions, choices, default=0)
+
+    df['final ft made'] = np.where(df['event_type'].eq('free throw') & df['result'].eq('made') & df['type'].eq('Free Throw 1 of 1')|
+    df['event_type'].eq('free throw') & df['result'].eq('made') & df['type'].eq('Free Throw 2 of 2')|
+    df['event_type'].eq('free throw') & df['result'].eq('made') & df['type'].eq('Free Throw 3 of 3'), 1, 0)
     
     # e. 
     # first posession of new quarter
-    conditions = [
-        df.shift(1)['period'].ne(df['period'])
-        ]
-    choices = [1]
-    df['first poss of qt'] = np.select(conditions, choices, default=0)
+    df['first poss of qt'] = np.where((df['period']) != (df.shift(-1)['period']) , 1, 0)
     
     
     # violation
-    df['off_violation'] = np.where((df['event_type'].eq('violation')) & 
-                              (df['team'].ne(df.shift(1)['team'])), 1, 0)
+    df['off_violation'] = np.where((df['event_type'].str.contains('violation')) & 
+                              (df['team']!=(df.shift(-1)['team'])), 1, 0)
     # offensive foul
-    df['off_foul'] = np.where((df['event_type'].eq('foul') & (df['reason'].eq('off.foul'))), 1, 0)
+    df['off_foul'] = np.where((df['event_type'].str.contains('foul') & (df['reason'].str.contains('off.foul'))), 1, 0)
     
     # f. 
-    df['possession change'] = np.where((df['made basket, no foul']==1) |
-                                       (df['turnover']==1) |
-                                       (df['def_rebound'] ==1)|
-                                       (df['final ft made']==1) |
-                                       (df['off_violation']==1) |
-                                       (df['off_foul']), 1, 0)
-    #df = df.drop('possession_number', axis=1)
     
-    df['new_game'] = np.where((df['game_id'].ne(df.shift(1)['game_id'])), 1, 0)
-
-    # get possession number within game
-    df['game_possession_number'] = df.groupby(df['new_game'].eq(1).cumsum())['possession change'].cumsum()
-    df['season_possession_number'] = df.groupby('new_game')['possession change'].cumsum()
 
     return df
 
@@ -182,13 +155,58 @@ dummy_df = create_dummies(clean_df)
 
 dummy_df = dummy_df[dummy_df['event_type'].notna()]
 
-dummy_df['season_possession_number'].max()
+df = dummy_df
 
 
+df['total'] = np.where((df['type'].str.contains('FLAGRANT')) |
+                       (df['type'].str.contains('flagrant')) |
+                       (df['description'].str.contains('t.foul')) |
+                       (df['description'].str.contains('T.FOUL'))|
+                       (df['description'].str.contains('T.Foul')) |
+                       (df['description'].str.contains('C.P.FOUL'))|
+                       (df['description'].str.contains('HANGING.TECH.FOUL')), 1, 0)
 
-df = dummy_df[dummy_df['type'].str.contains('flagrant')]
-df_2 = dummy_df[dummy_df['description'].eq('t.foul')]
+df['total'].sum()
+#1243
 
+
+df['possession change'] = np.where((df['made basket, no foul']==1) |
+                                   (df['turnover']==1) |
+                                   (df['def_rebound'] ==1)|
+                                   (df['final ft made']==1) |
+                                   (df['off_violation']==1) |
+                                   (df['off_foul']), 1, 0)
+#df = df.drop('possession_number', axis=1)
+
+df['new_game'] = np.where((df['game_id']!=(df.shift(-1)['game_id'])), 1, 0)
+
+# get possession number within game
+df['game_possession_number'] = df.groupby(df['new_game'].eq(1).cumsum())['possession change'].cumsum()
+df['season_possession_number'] = df.groupby('new_game')['possession change'].cumsum()
+df['season_possession_number'].max()
+# 109228
+
+
+df['turnover'].sum()
+# 33004
+
+df['def_rebound'].sum()
+# 98059
+
+df['made basket, no foul'].sum()
+# 9044
+
+df['final ft made'].sum()
+# 21927
+
+df['off_violation'].sum()
+# 1317
+
+df['off_foul'].sum()
+# 1902
+
+df['first poss of qt'].sum()
+# 3267
 
 
 # h. unique possession identifier
@@ -244,7 +262,7 @@ steve_df = pd.read_excel('/Users/hillarywolff/Desktop/game1.xlsx')
 
 game_1.compare(steve_df, keep_equal=True, keep_shape=True)
 
-game_1['game_id'] = int(game_1['game_id'])
+game_1['game_id'] = (game_1['game_id']).astype(int)
 
 merged = game_1.merge(steve_df, how='outer', left_on='game_id', right_on='game_id')
 
