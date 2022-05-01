@@ -87,13 +87,22 @@ def clean_df(df):
     
 def create_dummies(df):
     
+    df['team_shift'] = df['team'].shift(1)
+    df['team_t/f'] = df['team'] == df['team_shift']
+
+    df['quarter_shift'] = df['period'].shift(1)
+    df['quarter_t/f'] = df['period'] == df['quarter_shift']
+
+    df['reason_cat'] = df['reason'].astype('category')#.cat.codes
+
+    
     df['second_chance'] = np.where((df['type'].str.contains('rebound offensive')) |
                                    (df['type'].str.contains('team rebound')), 1, 0)
     # a. made basket, no foul
     df['made basket, no foul'] = np.where((df['points'].eq(2)) & 
-                                      (df.shift(-1)['reason']!=('s.foul')) |
+                                      (df['reason_cat']!=('s.foul')) |
                                       (df['points'].eq(3)) & 
-                                      (df['reason'].str.contains('s.foul') == False) |
+                                      (df['reason_cat']!='s.foul') |
                                       df['type'].str.contains('violation:defensive goaltending'), 1, 0)
     
     # b. turnover
@@ -102,25 +111,26 @@ def create_dummies(df):
     # c. missed shot rebounded by opposing team
    
     df['def_rebound'] = np.where(df['event_type'].str.contains('rebound') & 
-                                 (df['team']!=(df.shift(-1)['team'])), 1, 0)
+                                 (df['team_t/f']== False), 1, 0)
+    df['def_rebound_cat'] = df['event_type'].astype('category').cat.codes
     
     # d. 
     # final free throw made
 
-    df['final ft made'] = np.where(df['event_type'].eq('free throw') & df['result'].eq('made') & df['type'].eq('Free Throw 1 of 1')|
-    df['event_type'].eq('free throw') & df['result'].eq('made') & df['type'].eq('Free Throw 2 of 2')|
-    df['event_type'].eq('free throw') & df['result'].eq('made') & df['type'].eq('Free Throw 3 of 3'), 1, 0)
+    df['final ft made'] = np.where(df['event_type'].str.contains('free throw') & df['result'].str.contains('made') & df['type'].str.contains('Free Throw 1 of 1')|
+    df['event_type'].str.contains('free throw') & df['result'].str.contains('made') & df['type'].str.contains('Free Throw 2 of 2')|
+    df['event_type'].str.contains('free throw') & df['result'].str.contains('made') & df['type'].str.contains('Free Throw 3 of 3'), 1, 0)
     
     # e. 
     # first posession of new quarter
-    df['first poss of qt'] = np.where((df['period']) != (df.shift(-1)['period']) , 1, 0)
+    df['first poss of qt'] = np.where((df['quarter_t/f']==False) , 1, 0)
     
     
     # violation
     df['off_violation'] = np.where((df['event_type'].str.contains('violation')) & 
-                              (df['team']!=(df.shift(-1)['team'])), 1, 0)
+                              (df['team_shift']==False), 1, 0)
     # offensive foul
-    df['off_foul'] = np.where((df['event_type'].str.contains('foul') & (df['reason'].str.contains('off.foul'))), 1, 0)
+    df['off_foul'] = np.where((df['event_type'].str.contains('foul') & (df['reason_cat']==('off.foul'))), 1, 0)
     
     # f. 
     
@@ -183,8 +193,8 @@ df['new_game'] = np.where((df['game_id']!=(df.shift(-1)['game_id'])), 1, 0)
 # get possession number within game
 df['game_possession_number'] = df.groupby(df['new_game'].eq(1).cumsum())['possession change'].cumsum()
 df['season_possession_number'] = df.groupby('new_game')['possession change'].cumsum()
-df['season_possession_number'].max()
-# 109228
+df['season_possession_number'].nlargest()
+# 166845
 
 
 df['turnover'].sum()
@@ -194,7 +204,7 @@ df['def_rebound'].sum()
 # 98059
 
 df['made basket, no foul'].sum()
-# 9044
+# 93389
 
 df['final ft made'].sum()
 # 21927
@@ -207,6 +217,17 @@ df['off_foul'].sum()
 
 df['first poss of qt'].sum()
 # 3267
+
+# first_poss = df[df['first poss of qt']==1]
+
+# tf_df = df
+# tf_df['team_shift'] = tf_df['team'].shift(1)
+# tf_df['team_t/f'] = tf_df['team'] == tf_df['team_shift']
+
+# tf_df['quarter_shift'] = tf_df['period'].shift(1)
+# tf_df['quarter_t/f'] = tf_df['period'] == tf_df['quarter_shift']
+
+# tf_df['reason_cat'] = tf_df['reason'].astype('category')#.cat.codes
 
 
 # h. unique possession identifier
