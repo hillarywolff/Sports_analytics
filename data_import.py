@@ -448,11 +448,8 @@ from re import search
 PATH = r"/Users/hillarywolff/Desktop/"
 df = pd.read_csv(PATH+'2019-2020v3.csv')
 import statsmodels.formula.api as smf
-
-start_to = df['beg']*df['TO_type_end']
-off_to = df['off_team']*df['TO_type_end']
-def_to = df['def_team']*df['TO_type_end']
-
+df.columns
+df.season.unique
 
 df['TO_type'] = np.where(df['TO_dummy_end'].eq(0), 0, df['end_poss_bucket'])
 
@@ -483,20 +480,25 @@ pts5_reg = smf.ols(formula='pts5 ~ beg_poss_bucket + offrating + defrating + TO_
                    offrating*TO_type + defrating*TO_type', data=model_df).fit()
 
 reg_summary = [pts0_reg, pts1_reg, pts2_reg, pts3_reg, pts4_reg, pts5_reg]
-#for summary in reg_summary:
-    #print(summary)
+for summary in reg_summary:
+    print(summary.summary())
 
 
 # player level
 TO_play = df[df['TO_type']!=0]
 TO_play.groupby('TO_player')
 
+predict_df = pd.DataFrame()
+predict_df['pts0'] = pts0_reg.predict(TO_play)
+predict_df['pts1'] = pts1_reg.predict(TO_play)
+predict_df['pts2'] = pts2_reg.predict(TO_play)
+predict_df['pts3'] = pts3_reg.predict(TO_play)
+predict_df['pts4'] = pts4_reg.predict(TO_play)
+predict_df['pts5'] = pts5_reg.predict(TO_play)
+
 
 TO_no = TO_play
 TO_no['TO_type'] = 0
-
-TO_no['TO_type'].unique()
-
 
 
 new_df = pd.DataFrame()
@@ -509,13 +511,6 @@ new_df['null5'] = pts5_reg.predict(TO_no)
 
 
 
-predict_df = pd.DataFrame()
-predict_df['pts0'] = pts0_reg.predict(TO_play)
-predict_df['pts1'] = pts1_reg.predict(TO_play)
-predict_df['pts2'] = pts2_reg.predict(TO_play)
-predict_df['pts3'] = pts3_reg.predict(TO_play)
-predict_df['pts4'] = pts4_reg.predict(TO_play)
-predict_df['pts5'] = pts5_reg.predict(TO_play)
 
 
 merged = predict_df.merge(new_df, how='outer', left_index=True, right_index=True)
@@ -535,13 +530,28 @@ predicted_cost = merged[['cost_0', 'cost_1', 'cost_2', 'cost_3', 'cost_4', 'cost
 
 
 
-TO_team = TO_play[['TO_type', 'TO_player']]
+TO_play = TO_play[['TO_type', 'TO_player']]
 player_predict = TO_play.merge(predicted_cost, how='outer', left_index=True, right_index=True)
 
 sum_cols = ['cost_0', 'cost_1', 'cost_2', 'cost_3', 'cost_4', 'cost_5']
 player_predict['predicted_total_cost'] = player_predict[sum_cols].sum(axis=1)
 
+player_predict.to_csv(PATH+'player_prediction_poss.csv')
 
+
+
+
+unique_player = player_predict['TO_player'].unique().tolist()
+
+player_summary_df = pd.DataFrame()
+for player in unique_player:
+    player_summary_df['# TO'] = player_predict['TO_player'].value_counts()
+    player_summary_df['avg_TO_cost'] = (player_predict.groupby('TO_player')['predicted_total_cost']).mean()
+    player_summary_df['total_TO_cost'] = player_summary_df['# TO']*(player_summary_df['avg_TO_cost']).mean()
+
+
+player_summary_df = player_summary_df.iloc[1:]
+player_summary_df.to_csv(PATH+ 'player_summary.csv')
 
 ##########################################
 # team level
@@ -593,6 +603,10 @@ team_predict = TO_team.merge(team_predicted_cost, how='outer', left_index=True, 
 
 sum_cols = ['cost_0', 'cost_1', 'cost_2', 'cost_3', 'cost_4', 'cost_5']
 team_predict['predicted_total_cost'] = team_predict[sum_cols].sum(axis=1)
+team_predict.to_csv(PATH+'team_prediction_poss.csv')
+
+
+
 
 
 unique_team = team_predict['off_team'].unique().tolist()
@@ -603,14 +617,11 @@ for team in unique_team:
     team_summary_df['avg_TO_cost'] = (team_predict.groupby('off_team')['predicted_total_cost']).mean()
     team_summary_df['total_TO_cost'] = team_summary_df['# TO']*(team_summary_df['avg_TO_cost']).mean()
     
+team_summary_df.to_csv(PATH+'team_summary.csv')
 
 
-
-
-
-
-
-
+###############################################
+# wald test
 
 
 
