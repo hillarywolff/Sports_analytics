@@ -444,6 +444,79 @@ game_1['8'].sum()
 
 
 
+# steve data V3 May 7
+PATH = r"/Users/hillarywolff/Desktop/"
+df = pd.read_csv(PATH+'2019-2020v3.csv')
+import statsmodels.formula.api as smf
+
+start_to = df['beg']*df['TO_type_end']
+off_to = df['off_team']*df['TO_type_end']
+def_to = df['def_team']*df['TO_type_end']
+
+
+df['new_col'] = np.where(df['TO_dummy_end'].eq(0), 0, df['end_poss_bucket'])
+
+
+
+reg_model = smf.ols(formula="pts0~beg+offrating+defrating+new_col+beg*\
+                    new_col+offrating*new_col+defrating*new_col", data=df).fit().summary()
+print(reg_model)
+
+
+results_as_html = reg_model.tables[1].as_html()
+multi_df = (pd.read_html(results_as_html, header=0, index_col=0)[0]).reset_index()
+
+    
+
+
+
+multi_df.to_csv(PATH+'reg_model_4.csv')
+
+df.columns.tolist()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
