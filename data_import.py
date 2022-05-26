@@ -10,7 +10,27 @@ import glob
 import numpy as np
 from re import search
 
+import glob
 
+
+PATH = r"/Users/hillarywolff/Desktop/new datasets"
+all_files = glob.glob(PATH+ "/*.csv")
+
+
+fields = ['game_id', 'data_set', 'team', 'period', 'away_score', 'home_score', 
+          'remaining_time','elapsed', 'event_type', 'points', 'reason', 
+          'result', 'steal', 'type', 'description']
+
+big_ass_df = pd.DataFrame()
+
+df = []
+for f in all_files:
+    csv = pd.read_csv(f, encoding='latin-1')
+    df.append(csv)
+
+
+big_ass_df = pd.concat(df)
+df = big_ass_df
 ####################################################################
 
 # def clean_df(df):
@@ -445,39 +465,39 @@ from re import search
 
 
 # steve data V3 May 7
-PATH = r"/Users/hillarywolff/Desktop/"
-df = pd.read_csv(PATH+'2019-2020v3.csv')
+
 import statsmodels.formula.api as smf
-df.columns
-df.season.unique
+df.columns.tolist()
+print(df['turnover_bucket'].unique())
 
-df['TO_type'] = np.where(df['TO_dummy_end'].eq(0), 0, df['end_poss_bucket'])
+df['TO_type'] = np.where(df['TO_dummy_end'].eq(0), 0, df['TO_type_end'])
 
-
-model_df = df[df['pts1']!=999]
-model_df = df[df['pts2']!=999]
-model_df = df[df['pts3']!=999]
-model_df = df[df['pts4']!=999]
-model_df = df[df['pts5']!=999]
+model_df=df
 
 
-pts0_reg = smf.ols(formula='pts0 ~ beg_poss_bucket + offrating + defrating + TO_type +\
-                   beg_poss_bucket*TO_type + offrating*TO_type + defrating*TO_type', data=model_df).fit()
+pts0_reg = smf.ols(formula='pts0 ~ beg_play_bucket + offrating + defrating + turnover_end_bucket +\
+                   beg_play_bucket*turnover_end_bucket + offrating*turnover_end_bucket +\
+                       defrating*turnover_end_bucket ', data=model_df).fit()
+
+pts1_reg = smf.ols(formula='pts1 ~ beg_play_bucket + offrating + defrating + turnover_end_bucket +\
+                   beg_play_bucket*turnover_end_bucket + offrating*turnover_end_bucket +\
+                       defrating*turnover_end_bucket ', data=model_df).fit()
+
+pts2_reg= smf.ols(formula='pts2 ~ beg_play_bucket + offrating + defrating + turnover_end_bucket +\
+                   beg_play_bucket*turnover_end_bucket + offrating*turnover_end_bucket +\
+                       defrating*turnover_end_bucket ', data=model_df).fit()
+
+pts3_reg = smf.ols(formula='pts3 ~ beg_play_bucket + offrating + defrating + turnover_end_bucket +\
+                   beg_play_bucket*turnover_end_bucket + offrating*turnover_end_bucket +\
+                       defrating*turnover_end_bucket ', data=model_df).fit()
+
+pts4_reg = smf.ols(formula='pts4 ~ beg_play_bucket + offrating + defrating + turnover_end_bucket +\
+                   beg_play_bucket*turnover_end_bucket + offrating*turnover_end_bucket +\
+                       defrating*turnover_end_bucket ', data=model_df).fit()
                    
-pts1_reg = smf.ols(formula='pts1 ~ beg_poss_bucket + offrating + defrating + TO_type +\
-                    offrating*TO_type + defrating*TO_type', data=model_df).fit()
-
-pts2_reg= smf.ols(formula='pts2 ~ beg_poss_bucket + offrating + defrating + TO_type +\
-                    offrating*TO_type + defrating*TO_type', data=model_df).fit()
-
-pts3_reg = smf.ols(formula='pts3 ~ beg_poss_bucket + offrating + defrating + TO_type +\
-                   offrating*TO_type + defrating*TO_type', data=model_df).fit()
-
-pts4_reg = smf.ols(formula='pts4 ~ beg_poss_bucket + offrating + defrating + TO_type +\
-                   offrating*TO_type + defrating*TO_type', data=model_df).fit()
-                   
-pts5_reg = smf.ols(formula='pts5 ~ beg_poss_bucket + offrating + defrating + TO_type +\
-                   offrating*TO_type + defrating*TO_type', data=model_df).fit()
+pts5_reg = smf.ols(formula='pts5 ~ beg_play_bucket + offrating + defrating + turnover_end_bucket +\
+                   beg_play_bucket*turnover_end_bucket + offrating*turnover_end_bucket +\
+                       defrating*turnover_end_bucket ', data=model_df).fit()
 
 reg_summary = [pts0_reg, pts1_reg, pts2_reg, pts3_reg, pts4_reg, pts5_reg]
 for summary in reg_summary:
@@ -489,7 +509,7 @@ TO_play = df[df['TO_type']!=0]
 TO_play.groupby('TO_player')
 
 predict_df = pd.DataFrame()
-predict_df['pts0'] = pts0_reg.predict(TO_play)
+predict_df['pts0'] = pts0_reg.predict(TO_play.groupby('TO_player'))
 predict_df['pts1'] = pts1_reg.predict(TO_play)
 predict_df['pts2'] = pts2_reg.predict(TO_play)
 predict_df['pts3'] = pts3_reg.predict(TO_play)
