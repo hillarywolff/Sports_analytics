@@ -13,8 +13,8 @@ from re import search
 import glob
 
 
-PATH = r"/Users/hillarywolff/Desktop/new datasets"
-all_files = glob.glob(PATH+ "/*.csv")
+PATH = r"/Users/hillarywolff/Desktop/VERSION 3 - 5-26/"
+all_files = glob.glob(PATH+ "*.csv")
 
 
 fields = ['game_id', 'data_set', 'team', 'period', 'away_score', 'home_score', 
@@ -467,54 +467,67 @@ df = big_ass_df
 # steve data V3 May 7
 
 import statsmodels.formula.api as smf
-df.columns.tolist()
-print(df['turnover_bucket'].unique())
+
 
 df['TO_type'] = np.where(df['TO_dummy_end'].eq(0), 0, df['TO_type_end'])
 
 model_df=df
+df = model_df
+model_df = df[df['pts0']!=999]
+model_df = df[df['pts1']!=999]
+model_df = df[df['pts2']!=999]
 
+model_df['turnover_end_bucket'].unique().tolist()
 
-pts0_reg = smf.ols(formula='pts0 ~ beg_play_bucket + offrating + defrating + turnover_end_bucket +\
+pts0_reg = smf.ols(formula='pts0 ~ 0 + beg_play_bucket + offrating + defrating + turnover_end_bucket +\
                    beg_play_bucket*turnover_end_bucket + offrating*turnover_end_bucket +\
-                       defrating*turnover_end_bucket ', data=model_df).fit()
+                       defrating*turnover_end_bucket - turnover_end_bucket', data=model_df).fit()
 
-pts1_reg = smf.ols(formula='pts1 ~ beg_play_bucket + offrating + defrating + turnover_end_bucket +\
+pts1_reg = smf.ols(formula='pts1 ~ 0+ beg_play_bucket + offrating + defrating + turnover_end_bucket +\
                    beg_play_bucket*turnover_end_bucket + offrating*turnover_end_bucket +\
-                       defrating*turnover_end_bucket ', data=model_df).fit()
+                       defrating*turnover_end_bucket  - turnover_end_bucket', data=model_df).fit()
 
-pts2_reg= smf.ols(formula='pts2 ~ beg_play_bucket + offrating + defrating + turnover_end_bucket +\
+pts2_reg= smf.ols(formula='pts2 ~ 0+ beg_play_bucket + offrating + defrating + turnover_end_bucket +\
                    beg_play_bucket*turnover_end_bucket + offrating*turnover_end_bucket +\
-                       defrating*turnover_end_bucket ', data=model_df).fit()
+                       defrating*turnover_end_bucket - turnover_end_bucket ', data=model_df).fit()
 
-pts3_reg = smf.ols(formula='pts3 ~ beg_play_bucket + offrating + defrating + turnover_end_bucket +\
-                   beg_play_bucket*turnover_end_bucket + offrating*turnover_end_bucket +\
-                       defrating*turnover_end_bucket ', data=model_df).fit()
+pts0_reg.summary()
+pts1_reg.summary()
+pts2_reg.summary()
+# reg = smf.ols('pts2 ~ 0 + beg_play_bucket + offrating + defrating +\
+#                   beg_play_bucket*turnover_end_bucket + offrating*turnover_end_bucket +\
+#                       defrating*turnover_end_bucket-turnover_end_bucket', data =model_df).fit()
 
-pts4_reg = smf.ols(formula='pts4 ~ beg_play_bucket + offrating + defrating + turnover_end_bucket +\
-                   beg_play_bucket*turnover_end_bucket + offrating*turnover_end_bucket +\
-                       defrating*turnover_end_bucket ', data=model_df).fit()
+
+
+# pts3_reg = smf.ols(formula='pts3 ~ beg_play_bucket + offrating + defrating + turnover_end_bucket +\
+#                    beg_play_bucket*turnover_end_bucket + offrating*turnover_end_bucket +\
+#                        defrating*turnover_end_bucket ', data=model_df).fit()
+
+# pts4_reg = smf.ols(formula='pts4 ~ beg_play_bucket + offrating + defrating + turnover_end_bucket +\
+#                    beg_play_bucket*turnover_end_bucket + offrating*turnover_end_bucket +\
+#                        defrating*turnover_end_bucket ', data=model_df).fit()
                    
-pts5_reg = smf.ols(formula='pts5 ~ beg_play_bucket + offrating + defrating + turnover_end_bucket +\
-                   beg_play_bucket*turnover_end_bucket + offrating*turnover_end_bucket +\
-                       defrating*turnover_end_bucket ', data=model_df).fit()
+# pts5_reg = smf.ols(formula='pts5 ~ beg_play_bucket + offrating + defrating + turnover_end_bucket +\
+#                    beg_play_bucket*turnover_end_bucket + offrating*turnover_end_bucket +\
+#                        defrating*turnover_end_bucket ', data=model_df).fit()
 
-reg_summary = [pts0_reg, pts1_reg, pts2_reg, pts3_reg, pts4_reg, pts5_reg]
-for summary in reg_summary:
-    print(summary.summary())
+# reg_summary = [pts0_reg, pts1_reg, pts2_reg, pts3_reg, pts4_reg, pts5_reg]
+# for summary in reg_summary:
+#     print(summary.summary())
 
 
 # player level
-TO_play = df[df['TO_type']!=0]
-TO_play.groupby('TO_player')
+
+TO_play = model_df[model_df['TO_type']!=0]
+#TO_play.groupby('TO_player')
 
 predict_df = pd.DataFrame()
-predict_df['pts0'] = pts0_reg.predict(TO_play.groupby('TO_player'))
+predict_df['pts0'] = pts0_reg.predict(TO_play)
 predict_df['pts1'] = pts1_reg.predict(TO_play)
 predict_df['pts2'] = pts2_reg.predict(TO_play)
-predict_df['pts3'] = pts3_reg.predict(TO_play)
-predict_df['pts4'] = pts4_reg.predict(TO_play)
-predict_df['pts5'] = pts5_reg.predict(TO_play)
+predict_df['pts1 + pts2'] = pts1_reg.predict(TO_play) + pts2_reg.predict(TO_play)
+
 
 
 TO_no = TO_play
@@ -525,10 +538,7 @@ new_df = pd.DataFrame()
 new_df['null0'] = pts0_reg.predict(TO_no)
 new_df['null1'] = pts1_reg.predict(TO_no)
 new_df['null2'] = pts2_reg.predict(TO_no)
-new_df['null3'] = pts3_reg.predict(TO_no)
-new_df['null4'] = pts4_reg.predict(TO_no)
-new_df['null5'] = pts5_reg.predict(TO_no)
-
+new_df['null1+2'] = pts1_reg.predict(TO_no) + pts2_reg.predict(TO_no)
 
 
 
@@ -538,14 +548,12 @@ merged = predict_df.merge(new_df, how='outer', left_index=True, right_index=True
 merged['cost_0'] =  merged['null0']- merged['pts0'] 
 merged['cost_1'] =  merged['pts1'] -merged['null1']
 merged['cost_2'] =  merged['null2']- merged['pts2'] 
-merged['cost_3'] =  merged['pts3'] -merged['null3']
-merged['cost_4'] =  merged['null4']- merged['pts4'] 
-merged['cost_5'] =  merged['pts5'] -merged['null5']
+merged['cost_1+2'] =  merged['pts1 + pts2'] -merged['null1+2']
 
 # add prediction where TO=0 and take difference
 
 
-predicted_cost = merged[['cost_0', 'cost_1', 'cost_2', 'cost_3', 'cost_4', 'cost_5']]
+predicted_cost = merged[['cost_0', 'cost_1', 'cost_2', 'cost_1+2']]
 
 
 
